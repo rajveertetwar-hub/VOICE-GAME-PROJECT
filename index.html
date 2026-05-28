@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Bubble Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Lexend:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            height: 100vh;
+            background: radial-gradient(circle at top left, #667eea 0%, #764ba2 100%);
+            font-family: 'Lexend', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Game Container */
+        #game-stage {
+            flex: 1;
+            position: relative;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* Animated Bubble Style for Words */
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 15px 30px;
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.2rem;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            animation: float linear infinite;
+            cursor: default;
+            white-space: nowrap;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) translateX(20px); opacity: 0; }
+        }
+
+        /* Har bubble ki speed aur position alag */
+        #word-1 { left: 5%;  animation-duration: 10s; animation-delay: 0s; }
+        #word-2 { left: 25%; animation-duration: 12s; animation-delay: 2s; }
+        #word-3 { left: 45%; animation-duration: 9s;  animation-delay: 1s; }
+        #word-4 { left: 65%; animation-duration: 11s; animation-delay: 3s; }
+        #word-5 { left: 80%; animation-duration: 13s; animation-delay: 0.5s; }
+
+        /* Bottom Control Panel */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(15px);
+            height: 120px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0 20px;
+        }
+
+        .score-box {
+            background: white;
+            color: #764ba2;
+            padding: 10px 25px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .controls button {
+            border: none;
+            padding: 12px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-start { background: #43e97b; color: #1a5c2f; }
+        .btn-stop { background: #ff4b2b; color: white; }
+        
+        button:active { transform: scale(0.95); }
+
+        #live-text {
+            position: absolute;
+            bottom: 130px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            font-style: italic;
+        }
+
+        .matched {
+            background: #43e97b !important;
+            transform: scale(1.2);
+            transition: 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-stage">
+        <div id="word-1" class="bubble">...</div>
+        <div id="word-2" class="bubble">...</div>
+        <div id="word-3" class="bubble">...</div>
+        <div id="word-4" class="bubble">...</div>
+        <div id="word-5" class="bubble">...</div>
+    </div>
+
+    <div id="live-text">Waiting for voice input...</div>
+
+    <div class="glass-panel">
+        <div class="score-box">Score: <span id="score-val">0</span></div>
+        <div class="controls">
+            <button id="start-btn" class="btn-start">Start Game</button>
+            <button id="stop-btn" class="btn-stop">Stop</button>
+        </div>
+    </div>
+
+    <script>
+        const wordsList = ['hello', 'good morning', 'game', 'vowels', 'numbers', 'voice', 'magic', 'future', 'design', 'bottle', 'internet', 'cap' , 'laptop', 'alphabet'];
+        let score = 0;
+        let activeWords = {};
+
+        function updateWord(elementId) {
+            const newWord = wordsList[Math.floor(Math.random() * wordsList.length)];
+            const el = document.getElementById(elementId);
+            el.innerText = newWord;
+            activeWords[elementId] = newWord.toLowerCase();
+            
+            el.style.animation = 'none';
+            el.offsetHeight; 
+            el.style.animation = null; 
+        }
+
+        ['word-1', 'word-2', 'word-3', 'word-4', 'word-5'].forEach(id => updateWord(id));
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                let current = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    current = event.results[i][0].transcript.toLowerCase().trim();
+                }
+                
+                document.getElementById('live-text').innerText = "Heard: " + current;
+
+                for (let key in activeWords) {
+                    if (current.includes(activeWords[key])) {
+                        const el = document.getElementById(key);
+                        if(!el.classList.contains('matched')) {
+                            score++;
+                            document.getElementById('score-val').innerText = score;
+                            el.classList.add('matched');
+                            
+                            setTimeout(() => {
+                                el.classList.remove('matched');
+                                updateWord(key);
+                            }, 400);
+                        }
+                    }
+                }
+            };
+
+            document.getElementById('start-btn').onclick = () => {
+                recognition.start();
+                document.getElementById('live-text').innerText = "Listening...";
+                document.getElementById('start-btn').style.opacity = "0.5";
+            };
+
+            document.getElementById('stop-btn').onclick = () => {
+                recognition.stop();
+                document.getElementById('start-btn').style.opacity = "1";
+            };
+        } else {
+            alert("Speech recognition not supported in this browser.");
+        }
+    </script>
+</body>
+</html>
